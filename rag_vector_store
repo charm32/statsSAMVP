@@ -1,0 +1,449 @@
+"""
+=============================================================================
+ RAG Vector Store — standalone prototype (zero external dependencies)
+=============================================================================
+
+WHAT THIS IS
+------------
+A self-contained RAG (retrieval-augmented generation) pipeline you can run
+and test on its own, BEFORE it is wired into main.py's existing
+SEED_DOCUMENTS / PassageIndex / decide() structure.
+
+It has three parts:
+
+  1. DUMMY_DOCUMENTS   - synthetic test data, CLEARLY MARKED as fake (see
+                          "ABOUT THE DUMMY DATA" below). Structured exactly
+                          like main.py's SEED_DOCUMENTS so it is a drop-in
+                          fixture for testing the retrieval pipeline without
+                          touching real content.
+  2. VectorStore       - a small embedding + cosine-similarity index
+                          (pure Python, no numpy/no external embedding API).
+  3. rag_loop()        - an interactive question-answer loop that ONLY
+                          answers using text pulled from retrieved passages.
+                          If retrieval confidence is too low, or the corpus
+                          doesn't cover the question, it refuses instead of
+                          guessing. This is what keeps it from hallucinating.
+
+Run it directly:
+    python rag_vector_store.py
+
+No pip installs required — everything here is the standard library.
+=============================================================================
+"""
+
+from __future__ import annotations
+
+import hashlib
+import math
+import re
+from typing import Any, Dict, List, Tuple
+
+# ---------------------------------------------------------------------------
+# ABOUT THE DUMMY DATA — READ THIS FIRST
+# ---------------------------------------------------------------------------
+# Every document below is FAKE, built only to exercise this pipeline end to
+# end. None of the figures are real Stats SA values. Three things mark it as
+# synthetic so it can never be mistaken for production content later:
+#
+#   (a) IS_SYNTHETIC_TEST_DATA = True   <- a machine-checkable flag
+#   (b) every doc "id" is prefixed      "TEST-"
+#   (c) every doc has "source": "synthetic_test_fixture"
+#   (d) every passage's text is prefixed "[SYNTHETIC TEST DATA]"
+#
+# HOW THIS GETS "CALLED INTO" THE RAG
+# ------------------------------------
+# This block is intentionally kept separate from any production document
+# list. To use it, you EXPLICITLY ingest it — it is never auto-merged:
+#
+#     store = VectorStore()
+#     store.ingest(DUMMY_DOCUMENTS)          # test run, synthetic corpus
+#     # -- versus, in production --
+#     # store.ingest(SEED_DOCUMENTS)         # real run, approved corpus
+#
+# If you later split this block into its own file (e.g. seed_dummy_data.py),
+# keep it importable on its own so tests can do:
+#
+#     from seed_dummy_data import DUMMY_DOCUMENTS, IS_SYNTHETIC_TEST_DATA
+#     assert IS_SYNTHETIC_TEST_DATA is True   # fail loudly if this ever
+#                                              # gets pointed at a prod file
+#
+# Never merge DUMMY_DOCUMENTS into SEED_DOCUMENTS in main.py. Keep the two
+# lists — and the two ingestion calls — separate, so a test run can never
+# leak synthetic content into a real answer.
+# ---------------------------------------------------------------------------
+
+IS_SYNTHETIC_TEST_DATA = True
+
+DUMMY_DOCUMENTS: List[Dict[str, Any]] = [
+    {
+        "id": "TEST-P0141",
+        "title": "[TEST] Consumer Price Index (CPI)",
+        "product_number": "P0141",
+        "doc_type": "Statistical release",
+        "published": "2099-01-15",
+        "url": "https://example-test.invalid/P0141",
+        "theme": "Prices and inflation",
+        "source": "synthetic_test_fixture",
+        "passages": [
+            {
+                "ref": "Section 1",
+                "text": "[SYNTHETIC TEST DATA] The Consumer Price Index measures the average "
+                        "change over time in prices paid by consumers for a fixed basket of "
+                        "goods and services.",
+            },
+            {
+                "ref": "Table A",
+                "text": "[SYNTHETIC TEST DATA] In this fabricated test release, annual consumer "
+                        "price inflation was 9,9% in the reference month, purely for pipeline "
+                        "testing — this is not a real figure.",
+            },
+        ],
+    },
+    {
+        "id": "TEST-P0211",
+        "title": "[TEST] Quarterly Labour Force Survey (QLFS)",
+        "product_number": "P0211",
+        "doc_type": "Statistical release",
+        "published": "2099-01-10",
+        "url": "https://example-test.invalid/P0211",
+        "theme": "Employment and labour",
+        "source": "synthetic_test_fixture",
+        "passages": [
+            {
+                "ref": "Definitions",
+                "text": "[SYNTHETIC TEST DATA] The official unemployment rate counts people who "
+                        "were not employed, were available to work, and actively looked for "
+                        "work in the reference period.",
+            },
+            {
+                "ref": "Table 1",
+                "text": "[SYNTHETIC TEST DATA] In this fabricated test quarter the official "
+                        "unemployment rate was 11,1%, a placeholder value for testing only.",
+            },
+        ],
+    },
+    {
+        "id": "TEST-FAQ",
+        "title": "[TEST] Accessing test data: frequently asked questions",
+        "product_number": "FAQ",
+        "doc_type": "Approved FAQ",
+        "published": "2099-01-01",
+        "url": "https://example-test.invalid/faq",
+        "theme": "Access and services",
+        "source": "synthetic_test_fixture",
+        "passages": [
+            {
+                "ref": "Downloads",
+                "text": "[SYNTHETIC TEST DATA] All test releases in this fixture are published "
+                        "free of charge and are available as fake PDF and Excel files for "
+                        "pipeline testing.",
+            },
+            {
+                "ref": "Contact",
+                "text": "[SYNTHETIC TEST DATA] Test enquiries may be directed to "
+                        "test@example.invalid. This address does not exist.",
+            },
+        ],
+    },
+    # Deliberately left thin on purpose: no document here covers GDP or
+    # population. Asking about those topics against this fixture is how you
+    # test that the scope gate below REFUSES instead of improvising an
+    # answer from nearby-sounding passages.
+]
+
+
+# ---------------------------------------------------------------------------
+# TOKENIZATION (shared by embedding + coverage checks)
+# ---------------------------------------------------------------------------
+
+STOPWORDS = {
+    "the", "a", "an", "of", "and", "or", "to", "in", "is", "are", "was",
+    "were", "for", "on", "at", "by", "with", "as", "that", "this", "it",
+    "be", "from", "what", "how", "when", "where", "which", "who", "i",
+    "we", "you", "me", "can", "do", "does", "did", "please", "tell",
+    "about", "there", "their", "my", "your", "our",
+}
+
+
+def tokenize(text: str) -> List[str]:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return [w for w in words if w not in STOPWORDS and len(w) >= 2]
+
+
+# ---------------------------------------------------------------------------
+# EMBEDDING — pure-Python "hashing trick" vectorizer
+# ---------------------------------------------------------------------------
+# No embedding model or external API call. Each token (plus its character
+# trigrams, for typo/word-form tolerance) is hashed into one of EMBED_DIM
+# buckets and accumulated with a signed count, then the whole vector is
+# L2-normalized. This is a real, if low-fidelity, embedding technique
+# (feature hashing) — good enough to prototype the RAG shape without
+# pulling in numpy, sentence-transformers, or a network call.
+#
+# Swap-out point: replace `embed_text()` with a call to a real embedding
+# model (OpenAI, sentence-transformers, etc.) later — everything downstream
+# (VectorStore, cosine_similarity, rag_loop) is agnostic to how the vector
+# was produced, as long as embed_text() keeps returning a List[float].
+# ---------------------------------------------------------------------------
+
+EMBED_DIM = 256
+
+
+def _hash_bucket(token: str, dim: int) -> Tuple[int, int]:
+    """Deterministic hash -> (bucket index, sign). Sign reduces collision bias."""
+    h = hashlib.md5(token.encode("utf-8")).hexdigest()
+    idx = int(h[:8], 16) % dim
+    sign = 1 if int(h[8], 16) % 2 == 0 else -1
+    return idx, sign
+
+
+def _char_trigrams(word: str) -> List[str]:
+    padded = f"#{word}#"
+    if len(padded) < 3:
+        return [padded]
+    return [padded[i:i + 3] for i in range(len(padded) - 2)]
+
+
+def embed_text(text: str, dim: int = EMBED_DIM) -> List[float]:
+    vec = [0.0] * dim
+    tokens = tokenize(text)
+    for tok in tokens:
+        idx, sign = _hash_bucket(tok, dim)
+        vec[idx] += 1.0 * sign
+        for tri in _char_trigrams(tok):
+            idx2, sign2 = _hash_bucket(tri, dim)
+            vec[idx2] += 0.3 * sign2   # lower weight: sub-word signal
+
+    norm = math.sqrt(sum(v * v for v in vec))
+    if norm > 0:
+        vec = [v / norm for v in vec]
+    return vec
+
+
+def cosine_similarity(a: List[float], b: List[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))   # both already L2-normalized
+
+
+# ---------------------------------------------------------------------------
+# VECTOR STORE
+# ---------------------------------------------------------------------------
+
+class VectorStore:
+    """
+    In-memory vector index over document passages. Mirrors the shape of
+    main.py's PassageIndex (doc metadata + ref + text per entry) so it can
+    slot in as an alternative or companion retrieval backend later.
+    """
+
+    def __init__(self, dim: int = EMBED_DIM):
+        self.dim = dim
+        self.entries: List[Dict[str, Any]] = []
+        self.documents: Dict[str, Dict[str, Any]] = {}
+
+    def ingest(self, documents: List[Dict[str, Any]]) -> None:
+        """Add a document list (e.g. DUMMY_DOCUMENTS or SEED_DOCUMENTS)."""
+        for doc in documents:
+            self.documents[doc["id"]] = doc
+            for i, p in enumerate(doc["passages"]):
+                text = p["text"]
+                self.entries.append({
+                    "doc_id": doc["id"],
+                    "passage_id": f"{doc['id']}#{i}",
+                    "ref": p["ref"],
+                    "text": text,
+                    "tokens": set(tokenize(text)),
+                    "vector": embed_text(text, self.dim),
+                })
+
+    def search(self, query: str, top_k: int = 4) -> Dict[str, Any]:
+        """
+        Returns retrieved passages plus the two signals the scope gate needs:
+
+          coverage       fraction of the query's own words that actually
+                         appear in the retrieved passages (0-1)
+          unknown_terms  query words present in NO ingested passage at all —
+                         the strongest signal a question is out of scope
+        """
+        if not self.entries:
+            return {"results": [], "coverage": 0.0, "unknown_terms": [], "top_sim": 0.0}
+
+        q_tokens = tokenize(query)
+        q_vec = embed_text(query, self.dim)
+
+        corpus_vocab = set()
+        for e in self.entries:
+            corpus_vocab |= e["tokens"]
+        unknown_terms = sorted({t for t in q_tokens if t not in corpus_vocab})
+
+        scored = []
+        for e in self.entries:
+            sim = cosine_similarity(q_vec, e["vector"])
+            scored.append((sim, e))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top = scored[:top_k]
+
+        if not top or top[0][0] <= 0:
+            return {"results": [], "coverage": 0.0, "unknown_terms": unknown_terms, "top_sim": 0.0}
+
+        retrieved_vocab = set()
+        for _, e in top:
+            retrieved_vocab |= e["tokens"]
+        covered = [t for t in q_tokens if t in retrieved_vocab]
+        coverage = (len(covered) / len(q_tokens)) if q_tokens else 0.0
+
+        results = []
+        for sim, e in top:
+            doc = self.documents[e["doc_id"]]
+            results.append({
+                "passage_id": e["passage_id"],
+                "doc_id": doc["id"],
+                "title": doc["title"],
+                "ref": e["ref"],
+                "text": e["text"],
+                "url": doc.get("url", ""),
+                "similarity": round(sim, 3),
+            })
+
+        return {
+            "results": results,
+            "coverage": round(coverage, 3),
+            "unknown_terms": unknown_terms,
+            "top_sim": round(top[0][0], 3),
+        }
+
+
+# ---------------------------------------------------------------------------
+# SCOPE GATE — the anti-hallucination control
+# ---------------------------------------------------------------------------
+# Two independent floors must both be cleared before any answer is composed.
+# Either one failing means "refuse", not "do your best guess".
+
+SIMILARITY_FLOOR = 0.12   # min cosine similarity of the best match
+COVERAGE_FLOOR = 0.50     # min fraction of the question's words that must
+                           # actually appear in what was retrieved
+
+
+def scope_gate(query: str, retrieval: Dict[str, Any]) -> Dict[str, Any]:
+    reasons: List[str] = []
+    if not retrieval["results"]:
+        reasons.append("No ingested passage matches this question at all.")
+    else:
+        if retrieval["top_sim"] < SIMILARITY_FLOOR:
+            reasons.append(
+                f"Best match similarity {retrieval['top_sim']:.2f} is below the "
+                f"{SIMILARITY_FLOOR:.2f} floor."
+            )
+        if retrieval["coverage"] < COVERAGE_FLOOR:
+            reasons.append(
+                f"Retrieved passages cover only {retrieval['coverage']*100:.0f}% "
+                f"of the words in the question."
+            )
+        if retrieval["unknown_terms"]:
+            reasons.append(
+                "Question mentions terms absent from the whole corpus: "
+                + ", ".join(retrieval["unknown_terms"][:5]) + "."
+            )
+    return {"in_scope": len(reasons) == 0, "reasons": reasons}
+
+
+# ---------------------------------------------------------------------------
+# EXTRACTIVE ANSWER COMPOSER — no free-text generation, ever
+# ---------------------------------------------------------------------------
+# The answer is built ONLY out of the retrieved passage text, each line
+# tagged with its citation. Nothing here invents wording, so there is no
+# generation step that could hallucinate a fact.
+
+def compose_answer(retrieval: Dict[str, Any]) -> str:
+    lines = []
+    for r in retrieval["results"][:3]:
+        lines.append(f"- {r['text']}  [{r['title']} — {r['ref']}]")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# INTERACTIVE LOOP
+# ---------------------------------------------------------------------------
+
+def rag_loop(store: VectorStore) -> None:
+    print("=" * 70)
+    print(" RAG prototype — synthetic test corpus")
+    print(f" Documents ingested : {len(store.documents)}")
+    print(f" Passages indexed   : {len(store.entries)}")
+    print(" Type a question, or 'quit' / 'exit' to stop.")
+    print("=" * 70)
+
+    while True:
+        try:
+            question = input("\nQuestion> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nStopped.")
+            break
+
+        if not question:
+            continue
+        if question.lower() in {"quit", "exit"}:
+            print("Stopped.")
+            break
+
+        retrieval = store.search(question)
+        gate = scope_gate(question, retrieval)
+
+        if not gate["in_scope"]:
+            print("\n[REFUSED — outside what the ingested corpus supports]")
+            for reason in gate["reasons"]:
+                print(f"  - {reason}")
+            print("  No answer has been generated, to avoid guessing.")
+            continue
+
+        print(f"\n[ANSWER — similarity {retrieval['top_sim']}, "
+              f"coverage {retrieval['coverage']*100:.0f}%]")
+        print(compose_answer(retrieval))
+
+
+def main() -> None:
+    store = VectorStore()
+    store.ingest(DUMMY_DOCUMENTS)          # <-- synthetic fixture, test run only
+    rag_loop(store)
+
+
+if __name__ == "__main__":
+    main()
+
+
+# =============================================================================
+# INTEGRATION NOTES — how this slots into main.py later
+# =============================================================================
+# main.py currently has:
+#   SEED_DOCUMENTS  -> the approved corpus (same schema DUMMY_DOCUMENTS uses)
+#   PassageIndex    -> BM25 keyword retrieval over SEED_DOCUMENTS
+#   decide()        -> the decision gate (auto-release vs. human review)
+#
+# This file's VectorStore is built to the same entry shape as PassageIndex,
+# so the swap is mechanical, not a rewrite:
+#
+#   1. INDEX = PassageIndex(SEED_DOCUMENTS)   becomes
+#      INDEX = VectorStore(); INDEX.ingest(SEED_DOCUMENTS)
+#      (or run BOTH and blend scores — hybrid keyword + vector retrieval —
+#      by merging PassageIndex.search()'s BM25 score with this file's cosine
+#      similarity per passage_id before ranking.)
+#
+#   2. decide() already computes `coverage` and `unknown_terms` from
+#      PassageIndex.search(). scope_gate() above computes the same two
+#      signals from VectorStore.search(). Either can feed decide() —
+#      the field names line up on purpose.
+#
+#   3. compose_answer() here matches main.py's compose_answer() in spirit:
+#      extractive only, one citation per line, refuse below a coverage floor
+#      rather than draft something unsupported.
+#
+#   4. DUMMY_DOCUMENTS must never be passed to the same VectorStore/INDEX
+#      instance that also holds SEED_DOCUMENTS in a running server — keep
+#      test ingestion and production ingestion as separate instances/paths
+#      (e.g. a pytest fixture that builds its own throwaway VectorStore).
+#
+#   5. Upgrade path for real embeddings without changing anything else:
+#      swap embed_text() for a sentence-transformers or hosted embedding
+#      call, and/or swap VectorStore's in-memory list for sqlite-vec or
+#      chromadb for persistence — VectorStore.search()'s return shape can
+#      stay the same, so decide()/compose_answer() don't need to change.
+# =============================================================================
