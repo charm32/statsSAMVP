@@ -1072,276 +1072,194 @@ def stats() -> Dict[str, Any]:
 FRONTEND = r"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stats SA AI assistant - MVP</title>
+<title>Stats SA AI Assistant</title>
 <style>
-:root{--ink:#131a2e;--soft:#59617e;--page:#eef1f7;--panel:#fff;--line:#d3daea;
---green:#0f8a72;--amber:#e08a1e;--red:#d23b4e;--blue:#3f4fc4;--gold:#f0b429}
+:root{
+  --ink:#16283f; --soft:#64778e; --bg:#ffffff; --panel:#ffffff;
+  --line:#d7e6f5; --blue:#3fa1ff; --blue-dark:#1f7fe0; --blue-light:#eaf4ff;
+  --blue-pale:#f5faff; --red:#d23b4e;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--page);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-.wrap{max-width:1000px;margin:0 auto;padding:24px 18px 70px}
-header h1{margin:0;font-size:1.5rem;letter-spacing:-.02em}
-header p{margin:6px 0 0;color:var(--soft);font-size:.92rem;max-width:62ch}
-.warn{margin:16px 0 0;padding:10px 14px;border-radius:8px;font-size:.85rem;
- background:#fff6e5;border:1px solid var(--gold);color:#6b4b00}
-nav{display:flex;gap:6px;flex-wrap:wrap;margin:22px 0 18px;border-bottom:1px solid var(--line)}
-nav button{font:inherit;font-size:.92rem;font-weight:600;background:none;border:none;cursor:pointer;
- padding:10px 14px;color:var(--soft);border-bottom:3px solid transparent}
-nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--green)}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
-h2{font-size:1.05rem;margin:0 0 4px}
-.hint{color:var(--soft);font-size:.87rem;margin:0 0 14px}
-textarea,input{font:inherit;width:100%;padding:10px 12px;border:1px solid var(--line);
- border-radius:8px;background:var(--panel);color:var(--ink)}
-textarea{min-height:82px;resize:vertical}
-label{display:block;font-size:.84rem;font-weight:600;margin:10px 0 5px;color:var(--soft)}
-button.go{font:inherit;font-weight:600;cursor:pointer;margin-top:12px;padding:10px 18px;border-radius:8px;
- border:none;background:var(--green);color:#fff}
-button.go.alt{background:var(--blue)} button.go.danger{background:var(--red)}
-button.go:disabled{opacity:.5;cursor:default}
-.ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.ex button{font:inherit;font-size:.8rem;cursor:pointer;padding:5px 10px;border-radius:100px;
- border:1px solid var(--line);background:var(--page);color:var(--soft)}
-.badge{display:inline-block;font-size:.76rem;font-weight:700;padding:3px 9px;border-radius:100px;color:#fff}
-.b-auto{background:var(--green)} .b-rev{background:var(--amber)} .b-gap{background:var(--red)}
-.ans{white-space:pre-wrap;margin:12px 0;padding:14px;border-radius:8px;
- background:#f0faf7;border-left:4px solid var(--green)}
-.draftbox{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;
- padding:12px;border-radius:8px;background:#fdf6e9;border-left:4px solid var(--amber);margin:10px 0}
-.cites{margin:10px 0 0;padding:0;list-style:none;font-size:.86rem}
-.cites li{padding:8px 0;border-top:1px dashed var(--line)}
-.cites a{color:var(--blue)}
-.why{margin:10px 0 0;padding:10px 14px;border-radius:8px;background:#fdecef;border:1px solid var(--red);font-size:.86rem}
-.why b{color:var(--red)}
-.why ul{margin:6px 0 0;padding-left:18px}
-.meta{font-size:.8rem;color:var(--soft);margin-top:10px}
-.reuse{margin-top:12px;padding:10px 14px;border-radius:8px;background:#eef0ff;border:1px solid var(--blue);font-size:.86rem}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:.8rem;color:var(--soft)}
-.kpi{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-.kpi div{flex:1 1 120px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
-.kpi b{display:block;font-size:1.5rem;line-height:1.2}
-.kpi span{font-size:.78rem;color:var(--soft)}
-.item{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
-.item h3{margin:0 0 4px;font-size:.98rem}
-.item .sub{font-size:.8rem;color:var(--soft)}
-.empty{color:var(--soft);font-size:.9rem;padding:8px 0}
-</style></head><body><div class="wrap">
+body{margin:0;background:var(--bg);color:var(--ink);
+ font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
 
+/* ---------- layout ---------- */
+.wrap{max-width:720px;margin:0 auto;padding:56px 20px 80px;text-align:center}
+
+header h1{margin:0;font-size:2rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+header p{margin:8px 0 0;color:var(--soft);font-size:.95rem}
+
+/* ---------- ask box ---------- */
+.ask-box{margin-top:40px;text-align:left}
+textarea#pq{
+  width:100%;min-height:150px;resize:vertical;font:inherit;font-size:1.05rem;
+  padding:18px 20px;border:2px solid var(--line);border-radius:16px;
+  background:var(--blue-pale);color:var(--ink);outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+textarea#pq:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-light)}
+textarea#pq::placeholder{color:#93a4b8}
+
+button.go{
+  display:block;width:100%;margin-top:14px;font:inherit;font-size:1.05rem;font-weight:700;
+  cursor:pointer;padding:15px 18px;border-radius:14px;border:none;
+  background:var(--blue);color:#fff;transition:background .15s ease, transform .05s ease;
+}
+button.go:hover{background:var(--blue-dark)}
+button.go:active{transform:scale(.99)}
+button.go:disabled{opacity:.55;cursor:default}
+
+/* ---------- answer area ---------- */
+#pout{margin-top:26px;text-align:left}
+.answer{
+  white-space:pre-wrap;padding:18px 20px;border-radius:14px;
+  background:var(--blue-pale);border:1px solid var(--line);
+  border-left:5px solid var(--blue);font-size:1rem;color:var(--ink);
+}
+.src{margin-top:12px;font-size:.85rem;color:var(--soft)}
+.src b{display:block;margin-bottom:6px;color:var(--ink);font-size:.82rem}
+.src ul{margin:0;padding:0;list-style:none}
+.src li{padding:6px 0;border-top:1px dashed var(--line)}
+.src a{color:var(--blue-dark);text-decoration:none}
+.src a:hover{text-decoration:underline}
+.msg{padding:16px 18px;border-radius:14px;font-size:.95rem}
+.msg.pending{background:var(--blue-light);border:1px solid var(--blue);color:var(--ink)}
+.msg.err{background:#fdecef;border:1px solid var(--red);color:#8a2233}
+.loading{color:var(--soft);font-size:.9rem;padding:6px 0}
+
+/* ---------- FAQ side button ---------- */
+.faq-btn{
+  position:fixed;left:22px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:8px;
+  background:var(--blue-light);color:var(--blue-dark);border:1px solid var(--blue);
+  font:inherit;font-weight:700;font-size:.85rem;cursor:pointer;
+  padding:12px 14px;border-radius:100px;box-shadow:0 4px 14px rgba(63,161,255,.18);
+  writing-mode:horizontal-tb;
+}
+.faq-btn:hover{background:var(--blue);color:#fff}
+.faq-btn svg{width:18px;height:18px;flex:none}
+
+/* ---------- FAQ panel ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(22,40,63,.35);
+  display:none;z-index:20;
+}
+.overlay.open{display:block}
+.faq-panel{
+  position:fixed;top:0;left:0;bottom:0;width:min(380px,88vw);
+  background:#fff;box-shadow:6px 0 28px rgba(22,40,63,.18);
+  transform:translateX(-100%);transition:transform .2s ease;
+  z-index:21;padding:26px 22px;overflow-y:auto;text-align:left;
+}
+.faq-panel.open{transform:translateX(0)}
+.faq-panel h2{margin:0 0 4px;font-size:1.2rem;color:var(--ink)}
+.faq-panel p.sub{margin:0 0 18px;color:var(--soft);font-size:.85rem}
+.faq-close{
+  position:absolute;top:18px;right:18px;border:none;background:var(--blue-light);
+  color:var(--blue-dark);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;
+}
+.faq-item{border-bottom:1px solid var(--line);padding:14px 0}
+.faq-item:last-child{border-bottom:none}
+.faq-item h3{margin:0 0 6px;font-size:.92rem;color:var(--ink)}
+.faq-item p{margin:0;font-size:.85rem;color:var(--soft);line-height:1.5}
+</style></head><body>
+
+<button class="faq-btn" id="faqOpen" aria-haspopup="dialog" aria-controls="faqPanel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+  Frequently Asked Questions
+</button>
+
+<div class="overlay" id="faqOverlay"></div>
+<aside class="faq-panel" id="faqPanel" role="dialog" aria-label="Frequently Asked Questions">
+  <button class="faq-close" id="faqClose" aria-label="Close">&times;</button>
+  <h2>Frequently Asked Questions</h2>
+  <p class="sub">A few common questions about how this assistant works.</p>
+  <div id="faqList"></div>
+</aside>
+
+<div class="wrap">
 <header>
-<h1>Stats SA AI assistant &mdash; working MVP</h1>
-<p>Public self-service answers from approved sources, media queries routed to a human, and every approved answer stored for reuse.</p>
-<div class="warn"><b>Sample corpus.</b> Publication titles, product numbers and links follow statssa.gov.za, but passage text and figures in this demo are illustrative placeholders, not published Stats SA values.</div>
+  <h1>AI Assistant</h1>
+  <p>Ask about South African official statistics</p>
 </header>
 
-<nav role="tablist">
-<button role="tab" data-tab="public" aria-selected="true">Public assistant</button>
-<button role="tab" data-tab="media" aria-selected="false">Media desk</button>
-<button role="tab" data-tab="review" aria-selected="false">Reviewer console</button>
-<button role="tab" data-tab="repo" aria-selected="false">Approved repository</button>
-<button role="tab" data-tab="sources" aria-selected="false">Knowledge base</button>
-<button role="tab" data-tab="audit" aria-selected="false">Audit log</button>
-</nav>
-
-<!-- PUBLIC -->
-<section id="tab-public">
- <div class="panel">
-  <h2>Ask about South African official statistics</h2>
-  <p class="hint">Factual, well-covered questions are answered immediately with citations. Anything sensitive, interpretive or poorly covered is escalated to a Stats SA official instead.</p>
+<div class="ask-box">
   <textarea id="pq" placeholder="For example: What is the difference between the official and expanded unemployment rate?"></textarea>
-  <div class="ex" id="pex"></div>
   <button class="go" id="pbtn">Ask</button>
   <div id="pout"></div>
- </div>
-</section>
-
-<!-- MEDIA -->
-<section id="tab-media" hidden>
- <div class="panel">
-  <h2>Submit a media query</h2>
-  <p class="hint">Media queries are never answered automatically. A referenced draft is prepared for a communications official to review and approve.</p>
-  <label for="mwho">Your name and publication</label>
-  <input id="mwho" placeholder="e.g. T. Mokoena, Business Day">
-  <label for="mq">Query</label>
-  <textarea id="mq" placeholder="e.g. Can Stats SA comment on the revisions to the latest GDP estimate?"></textarea>
-  <button class="go alt" id="mbtn">Submit query</button>
-  <div id="mout"></div>
- </div>
-</section>
-
-<!-- REVIEW -->
-<section id="tab-review" hidden>
- <div class="panel">
-  <h2>Reviewer console</h2>
-  <p class="hint">Role-restricted. Edit the draft, then approve or reject. Approval writes the final wording into the reusable repository; rejection stores nothing.</p>
-  <label for="rkey">Reviewer API key</label>
-  <input id="rkey" value="statssa-demo-key">
-  <label for="rname">Reviewer name</label>
-  <input id="rname" value="Comms Official">
-  <button class="go" id="rload">Load review queue</button>
-  <div id="rout"></div>
- </div>
-</section>
-
-<!-- REPO -->
-<section id="tab-repo" hidden>
- <div class="panel"><h2>Approved communication repository</h2>
- <p class="hint">Every approved response, searchable and reusable. The assistant checks here first on every new query.</p>
- <button class="go" id="repoload">Refresh</button><div id="repoout"></div></div>
-</section>
-
-<!-- SOURCES -->
-<section id="tab-sources" hidden>
- <div class="panel"><h2>Approved knowledge base</h2>
- <p class="hint">The only material the assistant may read. Internal-only items are hidden from the public channel.</p>
- <div id="srcout"></div></div>
-</section>
-
-<!-- AUDIT -->
-<section id="tab-audit" hidden>
- <div class="panel"><h2>Audit log</h2>
- <p class="hint">Who asked what, what the gate decided, who approved it.</p>
- <button class="go" id="auload">Refresh</button><div id="auout"></div></div>
-</section>
+</div>
 
 </div>
+
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-// tabs
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', String(x===b)));
-  document.querySelectorAll('section').forEach(s => s.hidden = true);
-  $('#tab-' + b.dataset.tab).hidden = false;
-  if (b.dataset.tab === 'review') loadReviews();
-  if (b.dataset.tab === 'repo') loadRepo();
-  if (b.dataset.tab === 'sources') loadSources();
-  if (b.dataset.tab === 'audit') loadAudit();
-});
-
 async function api(path, opts){ const r = await fetch(path, opts); return r.json(); }
 
-// examples
-const EXAMPLES = [
-  "How is the official unemployment rate defined?",
-  "When is the CPI released each month?",
-  "What is the difference between CPI and PPI?",
-  "Where can I download Stats SA publications for free?",
-  "Why is the unemployment rate so high?",
-  "Can Stats SA comment on the minister's remarks about the economy?"
+/* ---------- FAQ panel ---------- */
+const FAQS = [
+  {
+    q: "What can I ask this assistant?",
+    a: "Questions about official South African statistics published by Stats SA — such as inflation (CPI), employment (QLFS) and economic growth (GDP)."
+  },
+  {
+    q: "How is the official unemployment rate defined?",
+    a: "It counts people aged 15 to 64 who were not employed in the reference week, were available to work, and actively looked for work or tried to start a business in the four weeks before being interviewed."
+  },
+  {
+    q: "What is the difference between CPI and PPI?",
+    a: "CPI (Consumer Price Index) measures price changes paid by consumers for a basket of goods and services. PPI (Producer Price Index) measures price changes received by producers, earlier in the supply chain."
+  },
+  {
+    q: "How often is data released, and when?",
+    a: "Most releases follow a published release calendar (for example, CPI is released monthly) and are embargoed until a set time on the release date."
+  },
+  {
+    q: "Where can I download the full publications?",
+    a: "All official releases are published free of charge on statssa.gov.za."
+  },
+  {
+    q: "Why do some questions not get an instant answer?",
+    a: "Questions that are sensitive, interpretive, or not well covered by approved sources are sent to a Stats SA official for review, rather than answered automatically."
+  }
 ];
-$('#pex').innerHTML = EXAMPLES.map(e => `<button type="button">${esc(e)}</button>`).join('');
-$('#pex').onclick = e => { if (e.target.tagName==='BUTTON'){ $('#pq').value = e.target.textContent; ask(); } };
+$('#faqList').innerHTML = FAQS.map(f => `
+  <div class="faq-item"><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>
+`).join('');
 
+function openFaq(){ $('#faqPanel').classList.add('open'); $('#faqOverlay').classList.add('open'); }
+function closeFaq(){ $('#faqPanel').classList.remove('open'); $('#faqOverlay').classList.remove('open'); }
+$('#faqOpen').onclick = openFaq;
+$('#faqClose').onclick = closeFaq;
+$('#faqOverlay').onclick = closeFaq;
+
+/* ---------- ask flow ---------- */
 function citeHtml(cs){
-  if (!cs.length) return '';
-  return '<ul class="cites">' + cs.map(c =>
-   `<li>[${c.n}] <a href="${c.url}" target="_blank" rel="noopener">${esc(c.title)}</a>
-    (${esc(c.product_number)}) &mdash; ${esc(c.reference)}, published ${esc(c.published)}</li>`).join('') + '</ul>';
+  if (!cs || !cs.length) return '';
+  return '<div class="src"><b>Sources</b><ul>' + cs.map(c =>
+   `<li><a href="${c.url}" target="_blank" rel="noopener">${esc(c.title)}</a> (${esc(c.product_number)})</li>`).join('') + '</ul></div>';
 }
 
-function renderResult(d, forMedia){
-  if (d.error) return `<div class="why"><b>${esc(d.error)}</b></div>`;
-  let h = '';
-  if (d.reuse) h += `<div class="reuse"><b>Previously approved answer found</b> (similarity ${d.reuse.similarity}).
-    Approved by ${esc(d.reuse.approved_by)} on ${esc(d.reuse.approved_at)}.<br><br>${esc(d.reuse.answer)}</div>`;
-
-  if (d.auto_release){
-    h += `<p style="margin-top:14px"><span class="badge b-auto">Answered automatically</span>
-      <span class="meta">confidence ${d.confidence} &middot; ${d.elapsed_ms} ms &middot; ${esc(d.query_id)}</span></p>`;
-    h += `<div class="ans">${esc(d.answer)}</div>`;
-    h += `<p class="meta">${esc(d.disclaimer)}</p>` + citeHtml(d.citations);
-  } else {
-    const badge = d.gap ? '<span class="badge b-gap">Information gap</span>'
-                        : '<span class="badge b-rev">Escalated for human review</span>';
-    h += `<p style="margin-top:14px">${badge}
-      <span class="meta">confidence ${d.confidence} &middot; ${esc(d.query_id)}</span></p>`;
-    if (d.gap) h += `<div class="why"><b>No supported answer generated.</b><br>${esc(d.gap_note)}</div>`;
-    h += `<div class="why"><b>Why this was not answered automatically</b><ul>` +
-         d.reasons.map(r => `<li>${esc(r)}</li>`).join('') + `</ul></div>`;
-    if (d.citations.length) h += `<p class="meta">Draft prepared for review, referencing:</p>` + citeHtml(d.citations);
-    h += `<p class="meta">Open the reviewer console to see and approve the draft.</p>`;
+function renderResult(d){
+  if (d.error) return `<div class="msg err">${esc(d.error)}</div>`;
+  if (d.reuse) {
+    return `<div class="answer">${esc(d.reuse.answer)}</div>` + citeHtml(d.reuse.citations);
   }
-  return h;
+  if (d.auto_release) {
+    return `<div class="answer">${esc(d.answer)}</div>` + citeHtml(d.citations);
+  }
+  return `<div class="msg pending">Thanks for your question. It's been logged for a quick check by a Stats SA official before an answer is shared.</div>`;
 }
 
 async function ask(){
   const q = $('#pq').value.trim(); if (!q) return;
-  $('#pbtn').disabled = true; $('#pout').innerHTML = '<p class="meta">Searching approved sources...</p>';
+  $('#pbtn').disabled = true; $('#pout').innerHTML = '<p class="loading">Searching approved sources...</p>';
   const d = await api('/api/query', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({question:q, channel:'public'})});
-  $('#pout').innerHTML = renderResult(d, false); $('#pbtn').disabled = false;
+  $('#pout').innerHTML = renderResult(d); $('#pbtn').disabled = false;
 }
 $('#pbtn').onclick = ask;
-
-$('#mbtn').onclick = async () => {
-  const q = $('#mq').value.trim(); if (!q) return;
-  $('#mbtn').disabled = true; $('#mout').innerHTML = '<p class="meta">Preparing draft...</p>';
-  const d = await api('/api/query', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({question:q, channel:'media', requester:$('#mwho').value})});
-  $('#mout').innerHTML = renderResult(d, true); $('#mbtn').disabled = false;
-};
-
-async function loadReviews(){
-  const d = await api('/api/reviews', {headers:{'X-API-Key': $('#rkey').value}});
-  if (d.error){ $('#rout').innerHTML = `<div class="why"><b>${esc(d.error)}</b></div>`; return; }
-  if (!d.items.length){ $('#rout').innerHTML = '<p class="empty">Nothing waiting for review.</p>'; return; }
-  $('#rout').innerHTML = d.items.map(i => `
-    <div class="item">
-      <h3>${esc(i.question)}</h3>
-      <p class="sub">${esc(i.id)} &middot; ${esc(i.channel)} channel &middot; ${esc(i.requester||'no requester')}
-       &middot; confidence ${i.confidence} &middot; ${esc(i.created_at)}</p>
-      <div class="why"><b>Escalation reasons</b><ul>${i.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></div>
-      <label>Draft (editable before approval)</label>
-      <textarea id="d-${i.id}" style="min-height:190px;font-family:ui-monospace,monospace;font-size:.8rem">${esc(i.draft)}</textarea>
-      <button class="go" onclick="decide('${i.id}','approve')">Approve and store</button>
-      <button class="go danger" onclick="decide('${i.id}','reject')">Reject</button>
-    </div>`).join('');
-}
-$('#rload').onclick = loadReviews;
-
-async function decide(id, action){
-  const text = $('#d-'+id).value;
-  const d = await api(`/api/reviews/${id}/${action}`, {method:'POST',
-    headers:{'Content-Type':'application/json','X-API-Key':$('#rkey').value},
-    body: JSON.stringify({text: text, reviewer: $('#rname').value})});
-  alert(d.message || d.error || 'Done');
-  loadReviews();
-}
-
-async function loadRepo(){
-  const d = await api('/api/repository');
-  $('#repoout').innerHTML = d.items.length ? d.items.map(i => `
-    <div class="item"><h3>${esc(i.question)}</h3>
-    <p class="sub">${esc(i.id)} &middot; approved by ${esc(i.approved_by)} &middot; ${esc(i.created_at)}</p>
-    <div class="draftbox">${esc(i.answer)}</div></div>`).join('')
-    : '<p class="empty">Empty. Approve a draft in the reviewer console and it appears here.</p>';
-}
-$('#repoload').onclick = loadRepo;
-
-async function loadSources(){
-  const d = await api('/api/sources');
-  $('#srcout').innerHTML = `<div class="kpi">
-    <div><b>${d.stats.documents}</b><span>approved documents</span></div>
-    <div><b>${d.stats.passages}</b><span>indexed passages</span></div>
-    <div><b>${d.stats.total_queries}</b><span>queries handled</span></div>
-    <div><b>${d.stats.auto_answered}</b><span>auto-answered</span></div>
-    <div><b>${d.stats.pending_review}</b><span>awaiting review</span></div>
-    <div><b>${d.stats.repository_entries}</b><span>reusable answers</span></div>
-  </div>
-  <table><tr><th>Title</th><th>Product</th><th>Type</th><th>Published</th><th>Passages</th><th>Access</th></tr>
-  ${d.items.map(s=>`<tr><td><a href="${s.url}" target="_blank" rel="noopener">${esc(s.title)}</a></td>
-   <td>${esc(s.product_number)}</td><td>${esc(s.doc_type)}</td><td>${esc(s.published)}</td>
-   <td>${s.passages}</td><td>${s.internal_only?'Internal only':'Public'}</td></tr>`).join('')}</table>`;
-}
-
-async function loadAudit(){
-  const d = await api('/api/audit');
-  $('#auout').innerHTML = d.items.length ? `<table><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr>
-   ${d.items.map(a=>`<tr><td>${esc(a.at)}</td><td>${esc(a.actor)}</td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join('')}</table>`
-   : '<p class="empty">No activity yet.</p>';
-}
 </script></body></html>
 """
 
