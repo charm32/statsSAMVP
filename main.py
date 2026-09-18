@@ -1075,79 +1075,123 @@ FRONTEND = r"""<!DOCTYPE html>
 <title>Stats SA AI Assistant</title>
 <style>
 :root{
-  --ink:#16283f; --soft:#64778e; --bg:#ffffff; --panel:#ffffff;
-  --line:#d7e6f5; --blue:#3fa1ff; --blue-dark:#1f7fe0; --blue-light:#eaf4ff;
-  --blue-pale:#f5faff; --red:#d23b4e;
+  --purple:#6a3df0; --purple2:#8b6cf5; --purple-dark:#4a24c9; --purple-deep:#2c1478;
+  --purple-pale:#f6f4fe; --purple-light:#efe9fd; --line:#e5defb;
+  --ink:#241b3d; --soft:#786f96; --white:#ffffff; --red:#d23b4e;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);
- font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+html,body{height:100%}
+body{margin:0;background:var(--purple-pale);color:var(--ink);
+ font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 
-/* ---------- layout ---------- */
-.wrap{max-width:720px;margin:0 auto;padding:56px 20px 80px;text-align:center}
+.app{display:flex;flex-direction:column;min-height:100vh}
 
-header h1{margin:0;font-size:2rem;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
-header p{margin:8px 0 0;color:var(--soft);font-size:.95rem}
-
-/* ---------- ask box ---------- */
-.ask-box{margin-top:40px;text-align:left}
-textarea#pq{
-  width:100%;min-height:150px;resize:vertical;font:inherit;font-size:1.05rem;
-  padding:18px 20px;border:2px solid var(--line);border-radius:16px;
-  background:var(--blue-pale);color:var(--ink);outline:none;
-  transition:border-color .15s ease, box-shadow .15s ease;
+/* ---------- top bar ---------- */
+.topbar{
+  height:52px;flex:none;display:flex;align-items:center;padding:0 24px;
+  background:linear-gradient(90deg,var(--purple) 0%,var(--purple2) 100%);
+  color:#fff;font-weight:800;letter-spacing:.01em;font-size:1rem;
 }
-textarea#pq:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-light)}
-textarea#pq::placeholder{color:#93a4b8}
 
-button.go{
-  display:block;width:100%;margin-top:14px;font:inherit;font-size:1.05rem;font-weight:700;
-  cursor:pointer;padding:15px 18px;border-radius:14px;border:none;
-  background:var(--blue);color:#fff;transition:background .15s ease, transform .05s ease;
+.body{display:flex;flex:1;min-height:0}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  width:250px;flex:none;background:#fff;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:20px 16px;gap:18px;
 }
-button.go:hover{background:var(--blue-dark)}
-button.go:active{transform:scale(.99)}
-button.go:disabled{opacity:.55;cursor:default}
+.brand{font-weight:800;font-size:1rem;color:var(--ink);padding:4px 6px 0}
 
-/* ---------- answer area ---------- */
-#pout{margin-top:26px;text-align:left}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:none;cursor:pointer;padding:12px 14px;border-radius:12px;
+  background:var(--purple-light);color:var(--purple-dark);
+  font:inherit;font-weight:700;font-size:.88rem;
+}
+.nav-item svg{width:18px;height:18px;flex:none}
+.nav-item:hover{background:#e4daff}
+
+.sidebar-spacer{flex:1}
+
+.recent-card{
+  border-radius:16px;padding:16px 16px 18px;color:#fff;
+  background:linear-gradient(160deg,var(--purple2) 0%,var(--purple) 45%,var(--purple-deep) 100%);
+  box-shadow:0 10px 24px rgba(74,36,201,.25);
+}
+.recent-card h3{margin:0 0 10px;font-size:.82rem;letter-spacing:.03em;
+  text-transform:uppercase;opacity:.85}
+.recent-card ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.recent-card li{
+  font-size:.82rem;line-height:1.35;padding:8px 10px;border-radius:9px;
+  background:rgba(255,255,255,.12);cursor:pointer;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.recent-card li:hover{background:rgba(255,255,255,.22)}
+.recent-card li.empty{opacity:.75;cursor:default;white-space:normal}
+.recent-card li.empty:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- main content ---------- */
+.content{flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:40px 24px 28px;min-width:0;overflow-y:auto}
+.content-head{text-align:center;margin-bottom:22px}
+.content-head h1{margin:0;font-size:1.9rem;font-weight:800;letter-spacing:-.02em}
+.content-head p{margin:6px 0 0;color:var(--soft);font-size:.92rem}
+
+.center-stage{
+  width:100%;max-width:760px;flex:1;min-height:220px;
+  display:flex;align-items:center;justify-content:center;padding:10px 0 24px;
+}
+.empty-state{display:flex;flex-direction:column;align-items:center;gap:14px;
+  color:var(--soft);text-align:center;max-width:360px}
+.empty-state svg{width:96px;height:96px;opacity:.9}
+.empty-state p{margin:0;font-size:.9rem}
+
+#pout{width:100%}
 .answer{
-  white-space:pre-wrap;padding:18px 20px;border-radius:14px;
-  background:var(--blue-pale);border:1px solid var(--line);
-  border-left:5px solid var(--blue);font-size:1rem;color:var(--ink);
+  white-space:pre-wrap;padding:20px 22px;border-radius:16px;
+  background:var(--purple-light);border:1px solid var(--line);
+  border-left:5px solid var(--purple);font-size:1rem;color:var(--ink);
 }
-.src{margin-top:12px;font-size:.85rem;color:var(--soft)}
+.src{margin-top:14px;font-size:.85rem;color:var(--soft)}
 .src b{display:block;margin-bottom:6px;color:var(--ink);font-size:.82rem}
 .src ul{margin:0;padding:0;list-style:none}
 .src li{padding:6px 0;border-top:1px dashed var(--line)}
-.src a{color:var(--blue-dark);text-decoration:none}
+.src a{color:var(--purple-dark);text-decoration:none}
 .src a:hover{text-decoration:underline}
-.msg{padding:16px 18px;border-radius:14px;font-size:.95rem}
-.msg.pending{background:var(--blue-light);border:1px solid var(--blue);color:var(--ink)}
+.msg{padding:18px 20px;border-radius:16px;font-size:.95rem}
+.msg.pending{background:var(--purple-light);border:1px solid var(--purple);color:var(--ink)}
 .msg.err{background:#fdecef;border:1px solid var(--red);color:#8a2233}
-.loading{color:var(--soft);font-size:.9rem;padding:6px 0}
+.loading{color:var(--soft);font-size:.9rem}
 
-/* ---------- FAQ side button ---------- */
-.faq-btn{
-  position:fixed;left:22px;top:50%;transform:translateY(-50%);
-  display:flex;align-items:center;gap:8px;
-  background:var(--blue-light);color:var(--blue-dark);border:1px solid var(--blue);
-  font:inherit;font-weight:700;font-size:.85rem;cursor:pointer;
-  padding:12px 14px;border-radius:100px;box-shadow:0 4px 14px rgba(63,161,255,.18);
-  writing-mode:horizontal-tb;
+/* ---------- ask bar (bottom, pill w/ send button) ---------- */
+.ask-bar{
+  width:100%;max-width:760px;display:flex;align-items:flex-end;gap:10px;
+  background:#fff;border:1px solid var(--line);border-radius:22px;
+  padding:10px 10px 10px 20px;box-shadow:0 10px 28px rgba(106,61,240,.12);
 }
-.faq-btn:hover{background:var(--blue);color:#fff}
-.faq-btn svg{width:18px;height:18px;flex:none}
+.ask-bar textarea{
+  flex:1;border:none;outline:none;resize:none;background:transparent;
+  font:inherit;font-size:1rem;color:var(--ink);min-height:26px;max-height:160px;
+  padding:8px 0;
+}
+.ask-bar textarea::placeholder{color:#a79cd6}
+.send-btn{
+  flex:none;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--purple2),var(--purple-dark));color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .05s ease, opacity .15s ease;
+}
+.send-btn svg{width:20px;height:20px}
+.send-btn:hover{opacity:.92}
+.send-btn:active{transform:scale(.95)}
+.send-btn:disabled{opacity:.5;cursor:default}
 
-/* ---------- FAQ panel ---------- */
-.overlay{
-  position:fixed;inset:0;background:rgba(22,40,63,.35);
-  display:none;z-index:20;
-}
+/* ---------- FAQ overlay + panel ---------- */
+.overlay{position:fixed;inset:0;background:rgba(36,27,61,.35);display:none;z-index:20}
 .overlay.open{display:block}
 .faq-panel{
   position:fixed;top:0;left:0;bottom:0;width:min(380px,88vw);
-  background:#fff;box-shadow:6px 0 28px rgba(22,40,63,.18);
+  background:#fff;box-shadow:6px 0 28px rgba(36,27,61,.18);
   transform:translateX(-100%);transition:transform .2s ease;
   z-index:21;padding:26px 22px;overflow-y:auto;text-align:left;
 }
@@ -1155,19 +1199,20 @@ button.go:disabled{opacity:.55;cursor:default}
 .faq-panel h2{margin:0 0 4px;font-size:1.2rem;color:var(--ink)}
 .faq-panel p.sub{margin:0 0 18px;color:var(--soft);font-size:.85rem}
 .faq-close{
-  position:absolute;top:18px;right:18px;border:none;background:var(--blue-light);
-  color:var(--blue-dark);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;
+  position:absolute;top:18px;right:18px;border:none;background:var(--purple-light);
+  color:var(--purple-dark);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;
 }
 .faq-item{border-bottom:1px solid var(--line);padding:14px 0}
 .faq-item:last-child{border-bottom:none}
 .faq-item h3{margin:0 0 6px;font-size:.92rem;color:var(--ink)}
 .faq-item p{margin:0;font-size:.85rem;color:var(--soft);line-height:1.5}
-</style></head><body>
 
-<button class="faq-btn" id="faqOpen" aria-haspopup="dialog" aria-controls="faqPanel">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
-  Frequently Asked Questions
-</button>
+@media (max-width:760px){
+  .sidebar{position:fixed;left:0;top:52px;bottom:0;transform:translateX(-100%);
+    transition:transform .2s ease;z-index:15;box-shadow:6px 0 28px rgba(36,27,61,.18)}
+  .sidebar.open{transform:translateX(0)}
+}
+</style></head><body>
 
 <div class="overlay" id="faqOverlay"></div>
 <aside class="faq-panel" id="faqPanel" role="dialog" aria-label="Frequently Asked Questions">
@@ -1177,56 +1222,67 @@ button.go:disabled{opacity:.55;cursor:default}
   <div id="faqList"></div>
 </aside>
 
-<div class="wrap">
-<header>
-  <h1>AI Assistant</h1>
-  <p>Ask about South African official statistics</p>
-</header>
+<div class="app">
+  <div class="topbar">Stats SA AI Assistant</div>
+  <div class="body">
+    <aside class="sidebar">
+      <div class="brand">Stats SA</div>
+      <button class="nav-item" id="faqOpen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+        Frequently Asked Questions
+      </button>
+      <div class="sidebar-spacer"></div>
+      <div class="recent-card">
+        <h3>Recent updates</h3>
+        <ul id="recentList"><li class="empty">Your recent questions will appear here</li></ul>
+      </div>
+    </aside>
 
-<div class="ask-box">
-  <textarea id="pq" placeholder="For example: What is the difference between the official and expanded unemployment rate?"></textarea>
-  <button class="go" id="pbtn">Ask</button>
-  <div id="pout"></div>
-</div>
+    <main class="content">
+      <div class="content-head">
+        <h1>AI Assistant</h1>
+        <p>Ask about South African official statistics</p>
+      </div>
 
+      <div class="center-stage" id="centerStage">
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <p>Ask a question below and the answer will appear here, with sources.</p>
+        </div>
+        <div id="pout" style="display:none"></div>
+      </div>
+
+      <div class="ask-bar">
+        <textarea id="pq" rows="1" placeholder="Ask about South African official statistics..."></textarea>
+        <button class="send-btn" id="pbtn" aria-label="Ask">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
 </div>
 
 <script>
 const $ = s => document.querySelector(s);
-const esc = s => (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-
+const esc = s => (s||'').replace(/[&<>]/g, c => ({'&':'&lt;','<':'&lt;','>':'&gt;'}[c]));
 async function api(path, opts){ const r = await fetch(path, opts); return r.json(); }
 
 /* ---------- FAQ panel ---------- */
 const FAQS = [
-  {
-    q: "What can I ask this assistant?",
-    a: "Questions about official South African statistics published by Stats SA — such as inflation (CPI), employment (QLFS) and economic growth (GDP)."
-  },
-  {
-    q: "How is the official unemployment rate defined?",
-    a: "It counts people aged 15 to 64 who were not employed in the reference week, were available to work, and actively looked for work or tried to start a business in the four weeks before being interviewed."
-  },
-  {
-    q: "What is the difference between CPI and PPI?",
-    a: "CPI (Consumer Price Index) measures price changes paid by consumers for a basket of goods and services. PPI (Producer Price Index) measures price changes received by producers, earlier in the supply chain."
-  },
-  {
-    q: "How often is data released, and when?",
-    a: "Most releases follow a published release calendar (for example, CPI is released monthly) and are embargoed until a set time on the release date."
-  },
-  {
-    q: "Where can I download the full publications?",
-    a: "All official releases are published free of charge on statssa.gov.za."
-  },
-  {
-    q: "Why do some questions not get an instant answer?",
-    a: "Questions that are sensitive, interpretive, or not well covered by approved sources are sent to a Stats SA official for review, rather than answered automatically."
-  }
+  {q:"What can I ask this assistant?",
+   a:"Questions about official South African statistics published by Stats SA — such as inflation (CPI), employment (QLFS) and economic growth (GDP)."},
+  {q:"How is the official unemployment rate defined?",
+   a:"It counts people aged 15 to 64 who were not employed in the reference week, were available to work, and actively looked for work or tried to start a business in the four weeks before being interviewed."},
+  {q:"What is the difference between CPI and PPI?",
+   a:"CPI (Consumer Price Index) measures price changes paid by consumers for a basket of goods and services. PPI (Producer Price Index) measures price changes received by producers, earlier in the supply chain."},
+  {q:"How often is data released, and when?",
+   a:"Most releases follow a published release calendar (for example, CPI is released monthly) and are embargoed until a set time on the release date."},
+  {q:"Where can I download the full publications?",
+   a:"All official releases are published free of charge on statssa.gov.za."},
+  {q:"Why do some questions not get an instant answer?",
+   a:"Questions that are sensitive, interpretive, or not well covered by approved sources are sent to a Stats SA official for review, rather than answered automatically."}
 ];
-$('#faqList').innerHTML = FAQS.map(f => `
-  <div class="faq-item"><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>
-`).join('');
+$('#faqList').innerHTML = FAQS.map(f => `<div class="faq-item"><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`).join('');
 
 function openFaq(){ $('#faqPanel').classList.add('open'); $('#faqOverlay').classList.add('open'); }
 function closeFaq(){ $('#faqPanel').classList.remove('open'); $('#faqOverlay').classList.remove('open'); }
@@ -1234,32 +1290,68 @@ $('#faqOpen').onclick = openFaq;
 $('#faqClose').onclick = closeFaq;
 $('#faqOverlay').onclick = closeFaq;
 
+/* ---------- recent updates (this browser only) ---------- */
+const RECENT_KEY = 'statssa_recent_questions';
+function loadRecent(){
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function saveRecent(list){
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0,5))); } catch(e){}
+}
+function renderRecent(){
+  const list = loadRecent();
+  const el = $('#recentList');
+  if (!list.length){
+    el.innerHTML = '<li class="empty">Your recent questions will appear here</li>';
+    return;
+  }
+  el.innerHTML = list.map(q => `<li title="${esc(q)}">${esc(q)}</li>`).join('');
+  [...el.children].forEach((li, i) => {
+    if (list[i]) li.onclick = () => { $('#pq').value = list[i]; $('#pq').focus(); };
+  });
+}
+function pushRecent(q){
+  const list = loadRecent().filter(x => x !== q);
+  list.unshift(q);
+  saveRecent(list);
+  renderRecent();
+}
+renderRecent();
+
 /* ---------- ask flow ---------- */
 function citeHtml(cs){
   if (!cs || !cs.length) return '';
   return '<div class="src"><b>Sources</b><ul>' + cs.map(c =>
    `<li><a href="${c.url}" target="_blank" rel="noopener">${esc(c.title)}</a> (${esc(c.product_number)})</li>`).join('') + '</ul></div>';
 }
-
 function renderResult(d){
   if (d.error) return `<div class="msg err">${esc(d.error)}</div>`;
-  if (d.reuse) {
-    return `<div class="answer">${esc(d.reuse.answer)}</div>` + citeHtml(d.reuse.citations);
-  }
-  if (d.auto_release) {
-    return `<div class="answer">${esc(d.answer)}</div>` + citeHtml(d.citations);
-  }
+  if (d.reuse) return `<div class="answer">${esc(d.reuse.answer)}</div>` + citeHtml(d.reuse.citations);
+  if (d.auto_release) return `<div class="answer">${esc(d.answer)}</div>` + citeHtml(d.citations);
   return `<div class="msg pending">Thanks for your question. It's been logged for a quick check by a Stats SA official before an answer is shared.</div>`;
 }
 
 async function ask(){
   const q = $('#pq').value.trim(); if (!q) return;
-  $('#pbtn').disabled = true; $('#pout').innerHTML = '<p class="loading">Searching approved sources...</p>';
+  $('#emptyState').style.display = 'none';
+  $('#pout').style.display = 'block';
+  $('#pbtn').disabled = true;
+  $('#pout').innerHTML = '<p class="loading">Searching approved sources...</p>';
+  pushRecent(q);
   const d = await api('/api/query', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({question:q, channel:'public'})});
-  $('#pout').innerHTML = renderResult(d); $('#pbtn').disabled = false;
+  $('#pout').innerHTML = renderResult(d);
+  $('#pbtn').disabled = false;
 }
 $('#pbtn').onclick = ask;
+$('#pq').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(); }
+});
+$('#pq').addEventListener('input', function(){
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
 </script></body></html>
 """
 
