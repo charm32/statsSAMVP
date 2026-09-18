@@ -1,0 +1,156 @@
+"""
+=============================================================================
+ DUMMY DOCUMENT — fictional recreation of a Stats SA CPI (P0141) release
+=============================================================================
+WHAT THIS IS
+------------
+A single, richly-detailed SYNTHETIC test document modelled on the real
+*shape* of a Stats SA Consumer Price Index statistical release (cover page,
+important notes, Table A main indices, group contributions table, category
+breakdown, methodology, enquiries) — built for testing the RAG pipeline in
+rag_vector_store.py with something closer to a real multi-section release
+than the two-passage TEST-P0141 stub already in that file.
+
+EVERY NUMBER, DATE AND NAME BELOW IS INVENTED. None of it is the real
+https://www.statssa.gov.za/publications/P0141/P0141August2025.pdf release,
+and it must never be treated as, cited as, or confused with real Stats SA
+data. It exists only to give the vector store something realistic-shaped to
+retrieve against during testing.
+
+HOW THIS IS MARKED AS FAKE (same convention as rag_vector_store.py)
+---------------------------------------------------------------------------
+  (a) id is prefixed              "TEST-"
+  (b) title is prefixed           "[TEST] ... (fictional recreation)"
+  (c) doc has "source"            "synthetic_test_fixture"
+  (d) doc has "is_synthetic"      True   <- machine-checkable flag
+  (e) url is a non-resolving      "https://example-test.invalid/..." address
+  (f) published date is far in    the future (2099) so it can never be
+                                   mistaken for a real release date
+  (g) every passage's text is     prefixed "[SYNTHETIC TEST DATA]"
+No real Stats SA personnel are named anywhere in this file, even fictionally,
+so invented figures are never attached to a real person's name.
+
+HOW THIS GETS "CALLED INTO" THE RAG
+---------------------------------------------------------------------------
+This document is deliberately NOT included in rag_vector_store.py's
+DUMMY_DOCUMENTS list — you opt into using it explicitly:
+
+    from rag_vector_store import VectorStore, DUMMY_DOCUMENTS
+    from dummy_cpi_p0141 import DUMMY_CPI_RELEASE
+
+    store = VectorStore()
+    store.ingest(DUMMY_DOCUMENTS)          # the existing thin test fixture
+    store.ingest([DUMMY_CPI_RELEASE])      # OR add this richer one too
+
+    # or run it on its own, to test retrieval against ONLY this document:
+    store2 = VectorStore()
+    store2.ingest([DUMMY_CPI_RELEASE])
+
+Never merge this into main.py's real SEED_DOCUMENTS. It is a test fixture,
+not an approved source.
+=============================================================================
+"""
+
+from __future__ import annotations
+from typing import Any, Dict
+
+IS_SYNTHETIC_TEST_DATA = True
+
+DUMMY_CPI_RELEASE: Dict[str, Any] = {
+    "id": "TEST-P0141-FULL",
+    "title": "[TEST] Consumer Price Index (CPI) — August 2025 (fictional recreation)",
+    "product_number": "P0141",
+    "doc_type": "Statistical release",
+    "published": "2099-09-19",
+    "url": "https://example-test.invalid/P0141/P0141August2025-fictional.pdf",
+    "landing_page": "https://example-test.invalid/P0141",
+    "theme": "Prices and inflation",
+    "source": "synthetic_test_fixture",
+    "is_synthetic": True,
+    "passages": [
+        {
+            "ref": "Cover page",
+            "text": "[SYNTHETIC TEST DATA] Statistical release P0141 — Consumer Price Index, "
+                    "fictional test edition modelled on an August release. Embargoed until "
+                    "10:00 on the fictional release date. This cover page is fabricated for "
+                    "pipeline testing and does not represent a real embargo.",
+        },
+        {
+            "ref": "Important notes",
+            "text": "[SYNTHETIC TEST DATA] For this fictional test release, Stats SA is shown "
+                    "as noting that the CPI basket and weights were most recently reviewed "
+                    "using a fictional income and expenditure survey. This passage exists to "
+                    "test retrieval of 'basket update' style questions and contains no real "
+                    "review date or methodology decision.",
+        },
+        {
+            "ref": "Table A — Main indices",
+            "text": "[SYNTHETIC TEST DATA] Fabricated Table A for testing only. "
+                    "All items (CPI Headline): weight 100,00, fictional index 118,4 in the "
+                    "test reference month, a fictional monthly change of 0,3% and a fictional "
+                    "annual change of 5,7%. CPI excluding food, non-alcoholic beverages, fuel "
+                    "and energy: fictional weight 74,40, fictional annual change 4,6%. None of "
+                    "these figures are real CPI values.",
+        },
+        {
+            "ref": "Table D — Group contributions",
+            "text": "[SYNTHETIC TEST DATA] Fabricated contributions to the fictional monthly "
+                    "CPI change, for testing table-style retrieval only: Food and "
+                    "non-alcoholic beverages contributed a fictional 0,1 percentage points; "
+                    "Housing and utilities contributed a fictional 0,1 percentage points; "
+                    "Transport contributed a fictional 0,1 percentage points; Miscellaneous "
+                    "goods and services contributed a fictional 0,0 percentage points; all "
+                    "other groups combined contributed a fictional 0,0 percentage points.",
+        },
+        {
+            "ref": "Basket categories",
+            "text": "[SYNTHETIC TEST DATA] For testing category-lookup questions, this "
+                    "fictional release lists the same twelve broad group names used in real "
+                    "CPI releases, each with an invented weight: Food and non-alcoholic "
+                    "beverages, Alcoholic beverages and tobacco, Clothing and footwear, "
+                    "Housing, water, electricity, gas and other fuels, Household contents and "
+                    "services, Health, Transport, Communication, Recreation and culture, "
+                    "Education, Restaurants and hotels, and Miscellaneous goods and services. "
+                    "The weight figures attached to each in this fixture are placeholders, not "
+                    "real basket weights.",
+        },
+        {
+            "ref": "Methodology (fictional)",
+            "text": "[SYNTHETIC TEST DATA] This fictional release states, for testing "
+                    "'how is it compiled' style questions, that prices are collected monthly "
+                    "from a fictional sample of retail outlets across all provinces, and that "
+                    "not every basket item is priced every month. This description is invented "
+                    "for pipeline testing and is not a statement of real Stats SA fieldwork "
+                    "practice.",
+        },
+        {
+            "ref": "Enquiries (fictional)",
+            "text": "[SYNTHETIC TEST DATA] For testing 'who do I contact' style questions, "
+                    "this fixture lists a fictional enquiries line: "
+                    "test-enquiries@example.invalid. No real Stats SA official or contact "
+                    "number is referenced anywhere in this fixture.",
+        },
+    ],
+}
+
+
+if __name__ == "__main__":
+    # Quick standalone sanity check: ingest this one document and run a
+    # couple of test questions against it using rag_vector_store.VectorStore.
+    from rag_vector_store import VectorStore, scope_gate, compose_answer
+
+    store = VectorStore()
+    store.ingest([DUMMY_CPI_RELEASE])
+
+    for q in [
+        "What was the headline CPI annual change in this fictional release?",
+        "Which groups contributed most to the fictional monthly change?",
+        "What is the mid-year population estimate?",   # deliberately out of scope
+    ]:
+        print("\nQ:", q)
+        retrieval = store.search(q)
+        gate = scope_gate(q, retrieval)
+        if gate["in_scope"]:
+            print(compose_answer(retrieval))
+        else:
+            print("[REFUSED]", "; ".join(gate["reasons"]))
